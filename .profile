@@ -56,13 +56,6 @@ alias java6='/usr/lib/jvm/java-6-sun-1.6.0.07/bin/java'
 alias rebash='source ~/.profile'
 alias e='mate'
 alias mr='cd ~/mobi'
-alias 362='cd ~/CSCI362'
-alias 355='cd ~/CSCI355'
-alias 342='cd ~/Sites/CSCIN342'
-alias 305='cd ~/CSCIN305'
-alias 402='cd ~/CSCI402'
-alias datareset='rake db:migrate:reset; rake db:bootstrap; rake spec:db:fixtures:load'
-alias populate='rake db:populate[1]; rake db:populate_more; rake db:populate_activity'
 
 #git aliases
 alias gco='git checkout'
@@ -75,6 +68,8 @@ alias grm='git rm'
 alias gst='git status'
 alias gb='git branch'
 alias gba='git branch -a'
+alias gf='git fetch'
+alias gft='git fetch --tags'
 alias gblame='git blame'
 alias gstash='git stash'
 alias gdiff='git diff'
@@ -88,23 +83,7 @@ alias ack='ack --color'
 
 alias bi='bundle install'
 
-
-
 alias console='script/console'
-
-function mobi() { 
-  cd ~/mobi && script/server
-}
-
-function mobi_helpers() {
-  mailtrap stop;
-	mailtrap start;
-  sudo memcached -d -u root
-}
-
-function db:seed() {
-	rake db:fixtures:load FIXTURES_PATH=db/data FIXTURES=$1
-}
 
 function mobi_backup_load(){
 	if [ $# -lt 2 ]
@@ -115,6 +94,12 @@ function mobi_backup_load(){
 	fi
 	 mysqldump -uroot  --add-drop-table --no-data $db | grep ^DROP | mysql -uroot $db
 	    mysql -h localhost -u root  $db < $1
+}
+
+function hup_mongod(){
+	sudo kill -9 `pid mongod`
+	sudo rm /usr/local/mongodb_data/mongod.lock
+	sudo mongod --dbpath /usr/local/mongodb_data/
 }
 
 function pid () {
@@ -135,7 +120,7 @@ function wiki() { dig +short txt $1.wp.dg.cx; }
 
 alias test='RAILS_ENV=test'
 alias test:reset='test rake db:migrate:reset'
-alias autospec='test:reset; autospec'
+# alias autospec='test:reset; autospec'
 alias cucumber='test cucumber'
 
 
@@ -146,28 +131,19 @@ CLASSPATH=/usr/local/mysql-connector-java/mysql-connecter-java-5.1.7-bin.jar
 export CLASSPATH
 #extend path
 
-PATH=$PATH:/home/anfleene/.gem/ruby/gems/1.8
+PATH=$PATH:/home/anfleene/.gem/ruby/gems/1.8:/usr/local/mongodb/bin
 export PATH
 
-
-alias pegasus='ssh $pegasus'
-alias corsair='ssh $corsair'
-alias production='ssh $production'
-alias demo='ssh $demo'
-alias sandbox='ssh $sandbox'
-alias stage='ssh $stage'
-alias roshambo='ssh $roshambo'
+alias prod='ssh $production'
+alias derp='ssh $mrderp'
 alias mrt='ssh $mrt'
-alias mypages='ssh $mypages'
-alias quarry='ssh $quarry'
-
-
 
 #bashrc
 profile=~/.bash/.profile
 export profile
 
 alias ebash='e $profile'
+alias ebashrc='e ~/.bash/.bashrc'
 
 # include bashrc
 source ~/.bash/.bashrc
