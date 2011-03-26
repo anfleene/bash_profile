@@ -1,15 +1,14 @@
 
 # MacPorts Installer addition on 2009-08-10_at_11:01:37: adding an appropriate PATH variable for use with MacPorts.
-export PATH=/opt/local/bin:/opt/local/sbin:$PATH
-# Finished adapting your PATH environment variable for use with MacPorts.
-
-
-# MacPorts Installer addition on 2009-08-10_at_11:01:37: adding an appropriate MANPATH variable for use with MacPorts.
-export MANPATH=/opt/local/share/man:$MANPATH
-# Finished adapting your MANPATH environment variableiable for use with MacPorts.
-
+export PATH=/usr/local/sbin:$PATH
+export PATH=/usr/local/nginx/sbin:$PATH
+export PATH=/Library/Perl/5.10.0/auto/share/dist/Cope:$PATH
 # If not running interactively, don't do anything
 [ -z "$PS1" ] && return
+
+export MAGICK_HOME="/usr/local/ImageMagick-6.6.5"
+export PATH="$MAGICK_HOME/bin:$PATH"
+export DYLD_LIBRARY_PATH="$MAGICK_HOME/lib"
 
 # don't put duplicate lines in the history. See bash(1) for more options
 export HISTCONTROL=ignoredups
@@ -24,7 +23,7 @@ shopt -s checkwinsize
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
 
-#[[ $- == *i* ]] && . ~/.bash_files/git-prompt.sh 
+#[[ $- == *i* ]] && . ~/.bash_files/git-prompt.sh
 # Alias definitions.
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.
@@ -46,6 +45,8 @@ if [ "$TERM" != "dumb" ] && [ -x /usr/bin/dircolors ]; then
     #alias egrep='egrep --color=auto'
 fi
 
+alias tail_prod='prod tail -f /opt/local/nginx/logs/access.log'
+
 # some more ls aliases
 #alias ll='ls -l'
 #alias la='ls -A'
@@ -54,7 +55,7 @@ alias javac6='/usr/lib/jvm/java-6-sun-1.6.0.07/bin/javac'
 alias java6='/usr/lib/jvm/java-6-sun-1.6.0.07/bin/java'
 # alias ls='ls -a'
 alias rebash='source ~/.profile'
-alias e='mate'
+alias e='$EDITOR'
 alias mr='cd ~/mobi'
 
 #git aliases
@@ -70,44 +71,82 @@ alias gb='git branch'
 alias gba='git branch -a'
 alias gf='git fetch'
 alias gft='git fetch --tags'
+alias gt='git tag'
 alias gblame='git blame'
 alias gstash='git stash'
 alias gdiff='git diff'
+alias glog='git log'
 alias gl='git pull'
 alias gp='git push'
 alias gd='git diff|e'
 alias wtf='git wtf'
 alias gls='git ls-files -u'
 alias gbt='git branch --track'
+alias gtrefresh='git tag -d `git tag`; git fetch --tags'
 alias ack='ack --color'
 
 alias bi='bundle install'
 
 alias console='script/console'
 
-function mobi_backup_load(){
-	if [ $# -lt 2 ]
-	  then
-	    db="mobi_development"
-		else
-			db=$2
-	fi
-	 mysqldump -uroot  --add-drop-table --no-data $db | grep ^DROP | mysql -uroot $db
-	    mysql -h localhost -u root  $db < $1
+function cdf() {
+  cd *$1*/
 }
 
+
+function mobi_mysql_load(){
+  #get the newest production mysql backup from s3
+  s3cmd get `ruby -e 'puts %x[s3cmd ls s3://mobi-db-backups/production-*].split("\n").last.match(/s3:\/\/.+/)'`
+  #get the gziped file that was just pulled
+  file=`ls production-*`
+  gunzip $file
+  file=`ls production-*`
+  #the single argument is for which database to dump it (you may want to change the default to match your config
+  if [ $# -lt 1 ]
+    then
+      db="mobi_development"
+    else
+      db=$2
+  fi
+  #dump that shizz into mysql
+   mysqldump -uroot  --add-drop-table --no-data $db | grep ^DROP | mysql -uroot $db
+   mysql -h localhost -u root  $db < $file
+   rm $file
+}
+
+function mobi_mongo_load () {
+  #mongo gets messy lets put it in a new dir we can delete later
+  mkdir production-mongo
+  cd production-mongo
+  #get latest mongo backup from s3
+  s3cmd get `ruby -e 'puts %x[s3cmd ls s3://mobi-mongo-backups/production-mongo-*].split("\n").last.match(/s3:\/\/.+/)'`
+  file=`ls production-mongo-*`
+  tar zxf $file
+  #set the mongo dir to be last nights production back up(the mobi dir)
+  mongoDir=tmp/`ls tmp/`/mobi
+	if [ $# -lt 1 ]
+	  then
+	    db="mobi_sandbox"
+		else
+			db=$1
+	fi
+  #dump it into mongo
+	mongo $db --eval "db.dropDatabase();"
+  mongorestore --indexesLast --db $db $mongoDir
+  #cleanup
+  cd ..
+  rm -rf production-mongo
+}
+
+
 function hup_mongod(){
-	sudo kill -9 `pid mongod`
+	sudo kill -9 `pidof mongod`
 	sudo rm /usr/local/mongodb_data/mongod.lock
 	sudo mongod --dbpath /usr/local/mongodb_data/
 }
 
-function pid () {
-	local i
- 	for i
-  	do
-    	ps acx | sed -n "s/ *\([0-9]*\) .* $i *\$/\1/p"
-  	done
+function hup_mysql(){
+  sudo kill -9 `pidof mysqld`
 }
 
 function clearlogs(){
@@ -115,13 +154,19 @@ function clearlogs(){
 	cat /dev/null > log/test.log
 }
 
+function cap(){
+  git pull
+  `which cap` $@
+}
+
 function wiki() { dig +short txt $1.wp.dg.cx; }
 
-
+function reset_dnsmasq(){
+  sudo launchctl unload -w /Library/LaunchDaemons/uk.org.thekelleys.dnsmasq.plist
+  sudo launchctl load -w /Library/LaunchDaemons/uk.org.thekelleys.dnsmasq.plist
+}
 alias test='RAILS_ENV=test'
 alias test:reset='test rake db:migrate:reset'
-# alias autospec='test:reset; autospec'
-alias cucumber='test cucumber'
 
 
 
@@ -134,7 +179,7 @@ export CLASSPATH
 PATH=$PATH:/home/anfleene/.gem/ruby/gems/1.8:/usr/local/mongodb/bin
 export PATH
 
-alias prod='ssh $production'
+alias prod='ssh $prod'
 alias derp='ssh $mrderp'
 alias mrt='ssh $mrt'
 
@@ -145,11 +190,12 @@ export profile
 alias ebash='e $profile'
 alias ebashrc='e ~/.bash/.bashrc'
 
+
 # include bashrc
 source ~/.bash/.bashrc
 
-EDITOR=mate
-export EDITOR 
+EDITOR='mvim -f'
+export EDITOR
 
 BLACK="\[\033[0;38m\]"
 RED="\[\033[0;31m\]"
