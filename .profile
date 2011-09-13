@@ -1,14 +1,15 @@
 
-# MacPorts Installer addition on 2009-08-10_at_11:01:37: adding an appropriate PATH variable for use with MacPorts.
 export PATH=/usr/local/sbin:$PATH
 export PATH=/usr/local/nginx/sbin:$PATH
 export PATH=/Library/Perl/5.10.0/auto/share/dist/Cope:$PATH
+
+export PATH=/usr/local/Cellar/python/2.7.1/bin:$PATH
 # If not running interactively, don't do anything
 [ -z "$PS1" ] && return
 
 export MAGICK_HOME="/usr/local/ImageMagick-6.6.5"
 export PATH="$MAGICK_HOME/bin:$PATH"
-export DYLD_LIBRARY_PATH="$MAGICK_HOME/lib"
+# export DYLD_LIBRARY_PATH="$MAGICK_HOME/lib"
 
 # don't put duplicate lines in the history. See bash(1) for more options
 export HISTCONTROL=ignoredups
@@ -66,7 +67,7 @@ alias gci='git commit -v'
 alias gca='git commit -v -a'
 alias ga='git add'
 alias grm='git rm'
-alias gst='git status'
+alias gst='git status -sb --ignore-submodules'
 alias gb='git branch'
 alias gba='git branch -a'
 alias gf='git fetch'
@@ -74,8 +75,8 @@ alias gft='git fetch --tags'
 alias gt='git tag'
 alias gblame='git blame'
 alias gstash='git stash'
-alias gdiff='git diff'
-alias glog='git log'
+alias gdiff='git diff --word-diff'
+alias glog='git log --oneline --decorate'
 alias gl='git pull'
 alias gp='git push'
 alias gd='git diff|e'
@@ -83,20 +84,38 @@ alias wtf='git wtf'
 alias gls='git ls-files -u'
 alias gbt='git branch --track'
 alias gtrefresh='git tag -d `git tag`; git fetch --tags'
+alias gnr='git name-rev --name-only'
 alias ack='ack --color'
 
 alias bi='bundle install'
 
 alias console='script/console'
 
+alias bap='bundle exec cap'
+
+function rake(){
+  START=`date`
+  `which rake` "$@"
+  END=`date`
+  echo "START TIME: $START"
+  echo "END TIME: $END"
+}
+
 function cdf() {
   cd *$1*/
 }
 
+function start_kitchen(){
+  ssh mobi@10.10.10.11
+  cd /applications/kitchen/
+  sudo thin -d -p 80 start
+  #password is derp
+}
 
 function mobi_mysql_load(){
   #get the newest production mysql backup from s3
-  s3cmd get `ruby -e 'puts %x[s3cmd ls s3://mobi-db-backups/production-*].split("\n").last.match(/s3:\/\/.+/)'`
+  new_backup=`ruby ~/.most_recent_backup $2`
+  s3cmd get  $new_backup
   #get the gziped file that was just pulled
   file=`ls production-*`
   gunzip $file
@@ -106,7 +125,7 @@ function mobi_mysql_load(){
     then
       db="mobi_development"
     else
-      db=$2
+      db=$1
   fi
   #dump that shizz into mysql
    mysqldump -uroot  --add-drop-table --no-data $db | grep ^DROP | mysql -uroot $db
@@ -121,7 +140,9 @@ function mobi_mongo_load () {
   #get latest mongo backup from s3
   s3cmd get `ruby -e 'puts %x[s3cmd ls s3://mobi-mongo-backups/production-mongo-*].split("\n").last.match(/s3:\/\/.+/)'`
   file=`ls production-mongo-*`
-  tar zxf $file
+  bunzip2 $file
+  file=`ls production-mongo-*`
+  tar xf $file
   #set the mongo dir to be last nights production back up(the mobi dir)
   mongoDir=tmp/`ls tmp/`/mobi
 	if [ $# -lt 1 ]
@@ -136,6 +157,23 @@ function mobi_mongo_load () {
   #cleanup
   cd ..
   rm -rf production-mongo
+}
+
+function mobi_asset_load() {
+  mkdir mobi-assets
+  cd mobi-assets
+  #get latest shared backup from s3
+  s3cmd get  `ruby -e 'puts %x[s3cmd ls s3://mobi-shared-backups/production-*].split("\n").last.match(/s3:\/\/.+/)'`
+ 	if [ $# -lt 1 ]
+	  then
+	    mobiDir="~/mobi/system"
+		else
+			mobiDir="$1/system"
+	fi
+  file=`ls production-*`
+  tar zxf $file
+  cp -rf shared/system/ $mobiDir
+  echo "you should delete the mobi-assets directory"
 }
 
 
@@ -159,12 +197,18 @@ function cap(){
   `which cap` $@
 }
 
+function solr(){
+  `which solr` ~/$1/solr
+}
+
 function wiki() { dig +short txt $1.wp.dg.cx; }
 
 function reset_dnsmasq(){
   sudo launchctl unload -w /Library/LaunchDaemons/uk.org.thekelleys.dnsmasq.plist
   sudo launchctl load -w /Library/LaunchDaemons/uk.org.thekelleys.dnsmasq.plist
 }
+
+alias ednsconf='e /usr/local/etc/dnsmasq.conf'
 alias test='RAILS_ENV=test'
 alias test:reset='test rake db:migrate:reset'
 
@@ -180,6 +224,7 @@ PATH=$PATH:/home/anfleene/.gem/ruby/gems/1.8:/usr/local/mongodb/bin
 export PATH
 
 alias prod='ssh $prod'
+alias garrison='ssh $garrison'
 alias derp='ssh $mrderp'
 alias mrt='ssh $mrt'
 
