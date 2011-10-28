@@ -58,6 +58,7 @@ alias java6='/usr/lib/jvm/java-6-sun-1.6.0.07/bin/java'
 alias rebash='source ~/.profile'
 alias e='$EDITOR'
 alias mr='cd ~/mobi'
+alias rsr='cd ~/report_scheduler'
 
 #git aliases
 alias gco='git checkout'
@@ -179,14 +180,16 @@ function mobi_asset_load() {
 
 
 function hup_mongod(){
-	sudo kill -9 `pidof mongod`
-	sudo rm /usr/local/mongodb_data/mongod.lock
-	sudo mongod --dbpath /usr/local/mongodb_data/
+	rm /usr/local/var/mongodb/mongod.lock
+  lunchy restart mongo
 }
 
-function hup_mysql(){
-  sudo kill -9 `pidof mysqld`
+hup_mobi(){
+  hup_mongod
+  lunchy restart pow
+  solr mobi
 }
+
 
 function clearlogs(){
 	cat /dev/null > log/development.log
@@ -196,6 +199,10 @@ function clearlogs(){
 function cap(){
   git pull
   `which cap` $@
+}
+
+function spec(){
+  time -p RAILS_ENV=test `which spec -cb` $@
 }
 
 function solr(){
