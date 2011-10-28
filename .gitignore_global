@@ -1,3 +1,7 @@
+#To load this file run
+#git config --global core.excludesfile ~/.bash/.gitignore_global
+#
+#
 # Compiled source #
 ###################
 *.com
