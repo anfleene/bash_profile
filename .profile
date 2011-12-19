@@ -46,19 +46,15 @@ if [ "$TERM" != "dumb" ] && [ -x /usr/bin/dircolors ]; then
     #alias egrep='egrep --color=auto'
 fi
 
-alias tail_prod='prod tail -f /opt/local/nginx/logs/access.log'
 
 # some more ls aliases
-#alias ll='ls -l'
-#alias la='ls -A'
-#alias l='ls -CF'
 alias javac6='/usr/lib/jvm/java-6-sun-1.6.0.07/bin/javac'
 alias java6='/usr/lib/jvm/java-6-sun-1.6.0.07/bin/java'
-# alias ls='ls -a'
 alias rebash='source ~/.profile'
 alias e='$EDITOR'
-alias mr='cd ~/mobi'
-alias rsr='cd ~/report_scheduler'
+alias ngin='cd ~/tstmedia/ngin'
+alias stan='cd ~/tstmedia/stat_ngin'
+alias snl='cd ~/tstmedia/sport_ngin_live'
 
 #git aliases
 alias gco='git checkout'
@@ -89,94 +85,81 @@ alias gnr='git name-rev --name-only'
 alias gcontain='git branch --contains'
 alias ack='ack --color'
 
-alias bi='bundle install'
+alias b='bundle'
 
-alias console='script/console'
-
-alias bap='bundle exec cap'
+alias console='rails console'
 
 function rake(){
-  START=`date`
-  `which rake` "$@"
-  END=`date`
-  echo "START TIME: $START"
-  echo "END TIME: $END"
+  time -p `which rake` "$@"
 }
 
 function cdf() {
   cd *$1*/
 }
 
-function start_kitchen(){
-  ssh mobi@10.10.10.11
-  cd /applications/kitchen/
-  sudo thin -d -p 80 start
-  #password is derp
-}
+#function mobi_mysql_load(){
+  ##get the newest production mysql backup from s3
+  #new_backup=`ruby ~/.most_recent_backup $2`
+  #s3cmd get  $new_backup
+  ##get the gziped file that was just pulled
+  #file=`ls production-*`
+  #gunzip $file
+  #file=`ls production-*`
+  ##the single argument is for which database to dump it (you may want to change the default to match your config
+  #if [ $# -lt 1 ]
+    #then
+      #db="mobi_development"
+    #else
+      #db=$1
+  #fi
+  ##dump that shizz into mysql
+   #mysqldump -uroot  --add-drop-table --no-data $db | grep ^DROP | mysql -uroot $db
+   #mysql -h localhost -u root  $db < $file
+   #rm $file
+#}
 
-function mobi_mysql_load(){
-  #get the newest production mysql backup from s3
-  new_backup=`ruby ~/.most_recent_backup $2`
-  s3cmd get  $new_backup
-  #get the gziped file that was just pulled
-  file=`ls production-*`
-  gunzip $file
-  file=`ls production-*`
-  #the single argument is for which database to dump it (you may want to change the default to match your config
-  if [ $# -lt 1 ]
-    then
-      db="mobi_development"
-    else
-      db=$1
-  fi
-  #dump that shizz into mysql
-   mysqldump -uroot  --add-drop-table --no-data $db | grep ^DROP | mysql -uroot $db
-   mysql -h localhost -u root  $db < $file
-   rm $file
-}
+#function mobi_mongo_load () {
+  ##mongo gets messy lets put it in a new dir we can delete later
+  #mkdir production-mongo
+  #cd production-mongo
+  ##get latest mongo backup from s3
+  #s3cmd get `ruby -e 'puts %x[s3cmd ls s3://mobi-mongo-backups/production-mongo-*].split("\n").last.match(/s3:\/\/.+/)'`
+  #file=`ls production-mongo-*`
+  #bunzip2 $file
+  #file=`ls production-mongo-*`
+  #tar xf $file
+  ##set the mongo dir to be last nights production back up(the mobi dir)
+  #mongoDir=tmp/`ls tmp/`/mobi
+	#if [ $# -lt 1 ]
+		#then
+			#db="mobi_sandbox"
+		#else
+			#db=$1
+	#fi
+  ##dump it into mongo
+	#mongo $db --eval "db.dropDatabase();"
+  #mongorestore --indexesLast --db $db $mongoDir
+  ##cleanup
+  #cd ..
+  #rm -rf production-mongo
+#}
 
-function mobi_mongo_load () {
-  #mongo gets messy lets put it in a new dir we can delete later
-  mkdir production-mongo
-  cd production-mongo
-  #get latest mongo backup from s3
-  s3cmd get `ruby -e 'puts %x[s3cmd ls s3://mobi-mongo-backups/production-mongo-*].split("\n").last.match(/s3:\/\/.+/)'`
-  file=`ls production-mongo-*`
-  bunzip2 $file
-  file=`ls production-mongo-*`
-  tar xf $file
-  #set the mongo dir to be last nights production back up(the mobi dir)
-  mongoDir=tmp/`ls tmp/`/mobi
-	if [ $# -lt 1 ]
-	  then
-	    db="mobi_sandbox"
-		else
-			db=$1
-	fi
-  #dump it into mongo
-	mongo $db --eval "db.dropDatabase();"
-  mongorestore --indexesLast --db $db $mongoDir
-  #cleanup
-  cd ..
-  rm -rf production-mongo
-}
-
-function mobi_asset_load() {
-  mkdir mobi-assets
-  cd mobi-assets
-  #get latest shared backup from s3
-  s3cmd get  `ruby -e 'puts %x[s3cmd ls s3://mobi-shared-backups/production-*].split("\n").last.match(/s3:\/\/.+/)'`
- 	if [ $# -lt 1 ]
-	  then
-	    mobiDir="~/mobi/system"
-		else
-			mobiDir="$1/system"
-	fi
-  file=`ls production-*`
-  tar zxf $file
-  cp -rf shared/system/ $mobiDir
-  echo "you should delete the mobi-assets directory"
-}
+#function mobi_asset_load() {
+  #mkdir mobi-assets
+  #cd mobi-assets
+  ##get latest shared backup from s3
+  #s3cmd get  `ruby -e 'puts %x[s3cmd ls s3://mobi-shared-backups/production-*].split("\n").last.match(/s3:\/\/.+/)'`
+   #if [ $# -lt 1 ]
+		#then
+			#mobiDir="~/mobi/system"
+		#else
+			#mobiDir="$1/system"
+	#fi
+  #file=`ls production-*`
+  #tar zxf $file
+  #cp -rf shared/system/ $mobiDir
+  #echo "you should delete the mobi-assets directory"
+#}
 
 
 function hup_mongod(){
@@ -184,11 +167,11 @@ function hup_mongod(){
   lunchy restart mongo
 }
 
-hup_mobi(){
-  hup_mongod
-  lunchy restart pow
-  solr mobi
-}
+#hup_mobi(){
+  #hup_mongod
+  #lunchy restart pow
+  #solr mobi
+#}
 
 
 function clearlogs(){
@@ -211,18 +194,6 @@ function solr(){
 
 function wiki() { dig +short txt $1.wp.dg.cx; }
 
-function reset_dnsmasq(){
-  sudo launchctl unload -w /Library/LaunchDaemons/uk.org.thekelleys.dnsmasq.plist
-  sudo launchctl load -w /Library/LaunchDaemons/uk.org.thekelleys.dnsmasq.plist
-}
-
-alias ednsconf='e /usr/local/etc/dnsmasq.conf'
-alias test='RAILS_ENV=test'
-alias test:reset='test rake db:migrate:reset'
-
-
-
-
 #class path
 CLASSPATH=/usr/local/mysql-connector-java/mysql-connecter-java-5.1.7-bin.jar
 export CLASSPATH
@@ -230,11 +201,6 @@ export CLASSPATH
 
 PATH=$PATH:/home/anfleene/.gem/ruby/gems/1.8:/usr/local/mongodb/bin
 export PATH
-
-alias prod='ssh $prod'
-alias garrison='ssh $garrison'
-alias derp='ssh $mrderp'
-alias mrt='ssh $mrt'
 
 #bashrc
 profile=~/.bash/.profile
